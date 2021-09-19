@@ -6,7 +6,7 @@
 
 <script>
 export default {
-  name: "Waveform",
+  name: "FrequencyBarGraph",
   props: {
     canvasWidth: {
       type: Number,
@@ -32,39 +32,33 @@ export default {
     draw: function () {
       requestAnimationFrame(this.draw);
 
-      this.analyser.getByteTimeDomainData(this.dataArray);
+      this.analyser.getByteFrequencyData(this.dataArray);
 
       this.canvasCtx.fillStyle = this.fillStyle;
       this.canvasCtx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
 
-      this.canvasCtx.lineWidth = 2;
-      this.canvasCtx.strokeStyle = this.strokeStyle;
-      this.canvasCtx.beginPath();
+      var barWidth = (this.canvasWidth / this.bufferLength) * 2.5;
+      var barHeight;
+      var x = 0;
 
-      let sliceWidth = (this.canvasWidth * 1.0) / this.bufferLength;
-      let x = 0;
+      for (var i = 0; i < this.bufferLength; i++) {
+        barHeight = this.dataArray[i] / 2;
 
-      for (let i = 0; i < this.bufferLength; i++) {
-        let v = this.dataArray[i] / 128.0;
-        let y = (v * this.canvasHeight) / 2;
+        this.canvasCtx.fillStyle = "rgb(150," + (barHeight + 100) + "," + (barHeight + 100) + ")";
+        this.canvasCtx.fillRect(
+          x,
+          this.canvasHeight - barHeight / 2,
+          barWidth,
+          barHeight
+        );
 
-        if (i === 0) {
-          this.canvasCtx.moveTo(x, y);
-        } else {
-          this.canvasCtx.lineTo(x, y);
-        }
-
-        x += sliceWidth;
+        x += barWidth + 1;
       }
-
-      this.canvasCtx.lineTo(this.canvas.width, this.canvas.height / 2);
-      this.canvasCtx.stroke();
     },
   },
   mounted: function () {
-
     // Reference implementation from Mozilla's MDN
-    // https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Visualizations_with_Web_Audio_API
+    // https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Visualizations_with_Web_Audio_API#creating_a_frequency_bar_graph
 
     navigator.mediaDevices
       .getUserMedia({ audio: true })
@@ -76,7 +70,7 @@ export default {
         this.source = this.audioCtx.createMediaStreamSource(stream);
         this.source.connect(this.analyser);
 
-        this.analyser.fftSize = 2048;
+        this.analyser.fftSize = 256;
 
         this.bufferLength = this.analyser.frequencyBinCount;
         this.dataArray = new Uint8Array(this.bufferLength);

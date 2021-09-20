@@ -6,7 +6,7 @@
 
 <script>
 export default {
-  name: "Waveform",
+  name: "Spectrogram",
   props: {
     canvasWidth: {
       type: Number,
@@ -20,52 +20,49 @@ export default {
       type: String,
       default: "rgba(0,0,0)",
     },
-    strokeStyle: {
-      type: String,
-      default: "rgb(255, 255, 255)",
-    },
   },
   data: function () {
-    return {};
+    return {
+      dataArray: [],
+      dataArrayHistory: [],
+    };
   },
   methods: {
     draw: function () {
       requestAnimationFrame(this.draw);
 
-      this.analyser.getByteTimeDomainData(this.dataArray);
+      this.analyser.getByteFrequencyData(this.dataArray);
+
+      // Keep history of frequency data for rendering -- note, we use the
+      // `slice()` method to create a new copy of the array
+      this.dataArrayHistory.push(this.dataArray.slice());
+      if (this.dataArrayHistory.length > 256) {
+        this.dataArrayHistory.shift();
+      }
 
       this.canvasCtx.fillStyle = this.fillStyle;
       this.canvasCtx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
 
-      this.canvasCtx.lineWidth = 2;
-      this.canvasCtx.strokeStyle = this.strokeStyle;
-      this.canvasCtx.beginPath();
+      let pixelWidth = this.canvasWidth / this.bufferLength;
+      let pixelHeight = this.canvasHeight / 256;
 
-      let sliceWidth = (this.canvasWidth * 1.0) / this.bufferLength;
-      let x = 0;
-
-      for (let i = 0; i < this.bufferLength; i++) {
-        let v = this.dataArray[i] / 128.0;
-        let y = (v * this.canvasHeight) / 2;
-
-        if (i === 0) {
-          this.canvasCtx.moveTo(x, y);
-        } else {
-          this.canvasCtx.lineTo(x, y);
+      // for each `y` of history, we increment along the height of the canvas
+      // for each `x` we increment along the width
+      for (var y = 0; y < this.dataArrayHistory.length; y++) {
+        for (var x = 0; x < this.dataArrayHistory[y].length; x++) {
+          let d = this.dataArrayHistory[y][x];
+          this.canvasCtx.fillStyle = `rgb(${d},${0},${d})`;
+          this.canvasCtx.fillRect(
+            x * pixelWidth,
+            y * pixelHeight,
+            pixelWidth,
+            pixelHeight
+          );
         }
-
-        x += sliceWidth;
       }
-
-      this.canvasCtx.lineTo(this.canvas.width, this.canvas.height / 2);
-      this.canvasCtx.stroke();
     },
   },
   mounted: function () {
-
-    // Reference implementation from Mozilla's MDN
-    // https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Visualizations_with_Web_Audio_API
-
     navigator.mediaDevices
       .getUserMedia({ audio: true })
       .then((stream) => {
@@ -76,7 +73,7 @@ export default {
         this.source = this.audioCtx.createMediaStreamSource(stream);
         this.source.connect(this.analyser);
 
-        this.analyser.fftSize = 2048;
+        this.analyser.fftSize = 256;
 
         this.bufferLength = this.analyser.frequencyBinCount;
         this.dataArray = new Uint8Array(this.bufferLength);

@@ -18,7 +18,7 @@ export default {
     },
     fillStyle: {
       type: String,
-      default: "rgba(100, 100, 140)",
+      default: "rgba(0,0,0)",
     },
     strokeStyle: {
       type: String,
@@ -29,6 +29,11 @@ export default {
     return {};
   },
   methods: {
+    map: function (n, nMin, nMax, rMin, rMax) {
+      // normalize a number between ranges `nMin` to `nMax` to fall between
+      // range `rMin` and `rMax`.
+      return ((n - nMin) * (rMax - nMin)) / (nMax - nMin) + rMin;
+    },
     draw: function () {
       requestAnimationFrame(this.draw);
 
@@ -37,17 +42,21 @@ export default {
       this.canvasCtx.fillStyle = this.fillStyle;
       this.canvasCtx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
 
-      var barWidth = (this.canvasWidth / this.bufferLength) * 2.5;
-      var barHeight;
+      // var barWidth = (this.canvasWidth / this.bufferLength) * 2.5;
+      var barWidth = this.canvasWidth / this.bufferLength;
       var x = 0;
 
       for (var i = 0; i < this.bufferLength; i++) {
-        barHeight = this.dataArray[i] / 2;
+        let d = this.dataArray[i];
 
-        this.canvasCtx.fillStyle = "rgb(150," + (barHeight + 100) + "," + (barHeight + 100) + ")";
+        // frequency data is on a scale from 0 to 255, so we must ensure this
+        // fits within the canvas
+        let barHeight = this.map(d, 0, 255, 0, this.canvasHeight);
+
+        this.canvasCtx.fillStyle = `rgb(${d},${0},${d})`;
         this.canvasCtx.fillRect(
           x,
-          this.canvasHeight - barHeight / 2,
+          this.canvasHeight - barHeight,
           barWidth,
           barHeight
         );

@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <Waveform :canvasHeight='250'/>
+    <Waveform :canvasHeight='150'/>
     <FrequencyBarGraph :canvasHeight='250'/>
     <Spectrogram :canvasHeight='250'/>
   </div>
